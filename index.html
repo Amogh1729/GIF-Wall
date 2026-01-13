@@ -10,7 +10,12 @@
 
 <body>
 
-    <button id="layoutToggle" class="toggle-btn">Switch to Fixed Size</button>
+    <div class="controls">
+        <button id="uploadBtn" class="control-btn upload-btn">Upload GIFs</button>
+        <input type="file" id="fileInput" multiple accept="image/gif, image/jpeg, image/png" style="display: none;">
+        <button id="layoutToggle" class="control-btn toggle-btn">Switch to Fixed Size</button>
+    </div>
+
     <h1>My Collection</h1>
 
     <div class="gallery-container">
@@ -27,6 +32,7 @@
         <img class="lightbox-content" id="lightbox-img">
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <script src="script.js"></script>
 
 </body>

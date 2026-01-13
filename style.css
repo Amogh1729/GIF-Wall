@@ -29,24 +29,27 @@ h1 {
     text-transform: uppercase;
     color: #e0e0e0;
     text-align: center;
+    margin-top: 50px;
+    /* Space for controls */
 }
 
 .gallery-container {
     width: 100%;
     max-width: 1400px;
-    column-count: 3;
+    column-count: 5;
+    /* Increased columns for smaller images */
     column-gap: var(--gap-size);
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1200px) {
     .gallery-container {
-        column-count: 2;
+        column-count: 3;
     }
 }
 
 @media (max-width: 600px) {
     .gallery-container {
-        column-count: 1;
+        column-count: 2;
     }
 }
 
@@ -63,6 +66,8 @@ h1 {
     position: relative;
     width: 100%;
     /* Fill the column width */
+    cursor: grab;
+    /* Indicate draggable */
 }
 
 /* Limit max width of individual gifs only if they are excessively large */
@@ -87,11 +92,22 @@ h1 {
     pointer-events: none;
 }
 
-/* Toggle Button */
-.toggle-btn {
+/* Controls Header */
+.controls {
     position: absolute;
     top: 20px;
-    right: 20px;
+    width: 100%;
+    padding: 0 40px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+    /* Let clicks pass through container */
+    z-index: 100;
+}
+
+.control-btn {
+    pointer-events: auto;
+    /* Enable clicks on buttons */
     background-color: var(--card-bg);
     color: var(--text-color);
     border: 1px solid #333;
@@ -102,9 +118,22 @@ h1 {
     transition: background-color 0.2s, transform 0.2s;
 }
 
-.toggle-btn:hover {
+.control-btn:hover {
     background-color: #333;
     transform: translateY(-2px);
+}
+
+.upload-btn {
+    background-color: #2e7d32;
+    border-color: #1b5e20;
+}
+
+.upload-btn:hover {
+    background-color: #1b5e20;
+}
+
+.toggle-btn {
+    background-color: var(--card-bg);
 }
 
 .gif-card:hover {
@@ -116,10 +145,15 @@ h1 {
     opacity: 1;
 }
 
+.gif-card:active {
+    cursor: grabbing;
+}
+
 /* FIXED MODE (Grid Layout) Overrides */
 .gallery-container.fixed-mode {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    /* Smaller grid items */
     column-count: auto;
     /* Reset column count */
     gap: var(--gap-size);

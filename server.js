@@ -1,71 +1,84 @@
-const http = require('http');
-const fs = require('fs');
+const express = require('express');
+const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
+const app = express();
 const PORT = 3000;
 const RESOURCE_DIR = path.join(__dirname, 'Resource');
+const ORDER_FILE = path.join(__dirname, 'order.json');
 
-const MIMETYPES = {
-    '.html': 'text/html',
-    '.css': 'text/css',
-    '.js': 'text/javascript',
-    '.gif': 'image/gif',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg'
-};
+// Ensure Resource dir exists
+if (!fs.existsSync(RESOURCE_DIR)) {
+    fs.mkdirSync(RESOURCE_DIR);
+}
 
-const server = http.createServer((req, res) => {
-    console.log(`Request: ${req.url}`);
+// Middleware
+app.use(express.json());
+app.use(express.static('.')); // Serve static files from root
 
-    // API Endpoint: Get list of GIFs
-    if (req.url === '/api/gifs') {
-        fs.readdir(RESOURCE_DIR, (err, files) => {
-            if (err) {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Failed to read directory' }));
-                return;
+// Multer Storage Configuration
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, RESOURCE_DIR);
+    },
+    filename: (req, file, cb) => {
+        // Keep original filename, but ensure uniqueness if needed (simple version here)
+        cb(null, file.originalname);
+    }
+});
+
+const upload = multer({ storage: storage });
+
+// API: Get List of GIFs (Sorted if order exists)
+app.get('/api/gifs', (req, res) => {
+    fs.readdir(RESOURCE_DIR, (err, files) => {
+        if (err) return res.status(500).json({ error: 'Failed to read directory' });
+
+        let images = files.filter(file => /\.(gif|jpg|jpeg|png)$/i.test(file));
+
+        // Apply Sort Order if exists
+        if (fs.existsSync(ORDER_FILE)) {
+            try {
+                const order = JSON.parse(fs.readFileSync(ORDER_FILE, 'utf8'));
+                // Sort images based on the order array
+                images.sort((a, b) => {
+                    const indexA = order.indexOf(a);
+                    const indexB = order.indexOf(b);
+                    // If both present, sort by index. If one missing, put at end.
+                    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                    if (indexA !== -1) return -1;
+                    if (indexB !== -1) return 1;
+                    return 0; // Keep original order if neither in list
+                });
+            } catch (e) {
+                console.error("Error reading order.json", e);
             }
-
-            const gifs = files.filter(file => file.toLowerCase().endsWith('.gif'));
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(gifs));
-        });
-        return;
-    }
-
-    // Static File Serving
-    let filePath = '.' + req.url;
-    if (filePath === './') {
-        filePath = './index.html';
-    }
-
-    // Allow serving from Resource directory
-    if (req.url.startsWith('/Resource/')) {
-        filePath = '.' + req.url;
-        // Decode URI components to handle spaces/special chars in filenames
-        filePath = decodeURIComponent(filePath);
-    }
-
-    const extname = path.extname(filePath);
-    const contentType = MIMETYPES[extname] || 'application/octet-stream';
-
-    fs.readFile(filePath, (err, content) => {
-        if (err) {
-            if (err.code == 'ENOENT') {
-                res.writeHead(404);
-                res.end('404 Not Found');
-            } else {
-                res.writeHead(500);
-                res.end(`Server Error: ${err.code}`);
-            }
-        } else {
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content, 'utf-8');
         }
+
+        res.json(images);
     });
 });
 
-server.listen(PORT, () => {
+// API: Upload Files
+app.post('/api/upload', upload.array('files'), (req, res) => {
+    res.json({ message: 'Upload successful', files: req.files.map(f => f.filename) });
+});
+
+// API: Save Reorder
+app.post('/api/reorder', (req, res) => {
+    const newOrder = req.body.order; // Expects JSON: { order: ["file1.gif", "file2.gif"] }
+    if (!newOrder || !Array.isArray(newOrder)) {
+        return res.status(400).json({ error: 'Invalid order data' });
+    }
+
+    fs.writeFile(ORDER_FILE, JSON.stringify(newOrder, null, 2), (err) => {
+        if (err) return res.status(500).json({ error: 'Failed to save order' });
+        res.json({ message: 'Order saved' });
+    });
+});
+
+app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}/`);
     console.log('Press Ctrl+C to stop.');
 });

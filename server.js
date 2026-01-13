@@ -60,9 +60,31 @@ app.get('/api/gifs', (req, res) => {
     });
 });
 
+const { exec } = require('child_process');
+
 // API: Upload Files
 app.post('/api/upload', upload.array('files'), (req, res) => {
-    res.json({ message: 'Upload successful', files: req.files.map(f => f.filename) });
+    // Files are already saved by Multer
+    const filenames = req.files.map(f => f.filename).join(', ');
+    console.log(`Uploaded: ${filenames}. Syncing to GitHub...`);
+
+    // Run git commands to sync
+    exec('git add Resource/ && git commit -m "Auto-upload new GIFs" && git push', (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Git sync error: ${error.message}`);
+            // Return success for the upload itself, but warn about Git
+            return res.json({
+                message: 'Upload successful (Local only - Git sync failed)',
+                files: req.files.map(f => f.filename),
+                gitError: error.message
+            });
+        }
+        console.log(`Git sync output: ${stdout}`);
+        res.json({
+            message: 'Upload successful and synced to GitHub!',
+            files: req.files.map(f => f.filename)
+        });
+    });
 });
 
 // API: Save Reorder

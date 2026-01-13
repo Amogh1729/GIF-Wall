@@ -86,39 +86,51 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadBtn = document.getElementById('uploadBtn');
     const fileInput = document.getElementById('fileInput');
 
-    uploadBtn.addEventListener('click', () => {
-        fileInput.click();
-    });
+    // Environment Check: Hide Uploads if not local
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        if (uploadBtn) uploadBtn.style.display = 'none';
+    } else {
+        // Upload Logic (Only attach if local)
+        uploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
 
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files.length > 0) {
-            const formData = new FormData();
-            for (let i = 0; i < fileInput.files.length; i++) {
-                formData.append('files', fileInput.files[i]);
-            }
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                const formData = new FormData();
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    formData.append('files', fileInput.files[i]);
+                }
 
-            // Show loading during upload
-            const loadingOverlay = document.getElementById('loading');
-            if (loadingOverlay) loadingOverlay.classList.remove('hidden');
-            document.querySelector('#loading p').textContent = "Uploading...";
+                // Show loading during upload
+                const loadingOverlay = document.getElementById('loading');
+                if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+                document.querySelector('#loading p').textContent = "Uploading & Syncing to GitHub...";
 
-            fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Upload success:', data);
-                    loadGallery(); // Refresh to show new files
-                    document.querySelector('#loading p').textContent = "Loading Collection...";
+                fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
                 })
-                .catch(error => {
-                    console.error('Error uploading:', error);
-                    alert('Upload failed!');
-                    if (loadingOverlay) loadingOverlay.classList.add('hidden');
-                });
-        }
-    });
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Upload success:', data);
+                        loadGallery(); // Refresh to show new files
+
+                        let msg = "Loading Collection...";
+                        if (data.message && data.message.includes('Git sync failed')) {
+                            alert("Uploaded locally, but Git Sync failed. Check server logs.");
+                        }
+
+                        document.querySelector('#loading p').textContent = msg;
+                    })
+                    .catch(error => {
+                        console.error('Error uploading:', error);
+                        alert('Upload failed!');
+                        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+                    });
+            }
+        });
+    }
 
     // SortableJS Logic
     if (typeof Sortable !== 'undefined') {

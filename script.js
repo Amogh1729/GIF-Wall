@@ -1,8 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     const container = document.querySelector('.gallery-container');
 
-    fetch('/api/gifs')
-        .then(response => response.json())
+    // Try fetching static list first (GitHub Pages), then dynamic API (Local Node Server)
+    fetch('gifs.json')
+        .then(response => {
+            if (!response.ok) throw new Error('Static list not found');
+            return response.json();
+        })
+        .catch(() => fetch('/api/gifs').then(res => res.json()))
         .then(gifs => {
             if (gifs.length === 0) {
                 container.innerHTML = '<p style="text-align:center; width:100%; color:#888;">No GIFs found in "Resource" folder.</p>';
